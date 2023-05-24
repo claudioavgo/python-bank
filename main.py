@@ -3,6 +3,7 @@
 import os;os.system('cls')
 import time
 import datetime
+import random
 
 def db(user, data='', create=False, read=False, read_choose="data", update=False, update_content=False, update_category=False, delete=False):
 
@@ -61,9 +62,10 @@ def db(user, data='', create=False, read=False, read_choose="data", update=False
                 lines=file.readlines()
 
                 for i in lines:
-                    if not data in i:
+                    if not data in i.strip():
                         banco_salvo.append(i)
-                
+                        
+            with open(f'./database/financas-{user}.csv', 'w') as file:
                 file.write(''.join(banco_salvo))
                 
             return "Deleted!"
@@ -96,117 +98,239 @@ def moldura(texto):
         if len(linha_tamanho) > len(maior_linha):
             maior_linha=linha_tamanho
 
-    print(f'| {"="*len(maior_linha)} |')
+    print(f'+ {"="*len(maior_linha)} +')
     for linha in linhas:
         print(f'| {linha}{" "*(len(maior_linha)-len(linha))} |')
-    print(f'| {"="*len(maior_linha)} |')
+    print(f'+ {"="*len(maior_linha)} +')
+
+def balanco(user):
+    db(user)
+
+def id(numeros=5):
+    letras=list("abcdefghijklmnopqrstuvwxyz")
+    token=[]
+
+    for numero in range(numeros):
+        metade = random.randint(0, 1)
+        caps = random.randint(0, 1)
+        if metade:
+           token.append(str(random.randint(0, 9)))
+        else:
+            if caps:
+                token.append(random.choice(letras).upper())
+            else:
+                token.append(random.choice(letras))   	
+    return ''.join(token)
+
 
 def console(user):
     os.system('cls')
     usr=None
     with open('ares.key', 'r') as file:
         for usuario in file.readlines():
-            #print(usuario)
             if user in usuario:
                 usr=usuario.strip().split(";")
-    
-    #print(user)
 
-    opcoes='[1] - Ver extrato  [2] - Adicionar despesa  [3] - Adicionar saldo  [4] - Limpar  [5] - Sair'
+    opcoes='[1] - Ver extrato  [2] - Adicionar movimentação  [3] - Limpar  [4] - Sair'
 
     banner(f"Menu {' '*(len(opcoes) - (len(f'Conta: [{usr[1]}]')+len('Menu ')))}Conta: [{usr[1]}] Saldo: []", opcoes)
 
     while True:
         try:
             resposta=input('> Digite uma opção: ')
-            while resposta not in ['1', '2', '3', '4', '5']:
+            while resposta not in ['1', '2', '3', '4']:
                 print('>> Opção inválida, por gentileza digite novamente!')
                 resposta=input('> Digite uma opção: ')
             
             if resposta=="1":
                 os.system('cls')
-                print('Categoria\t|\tNome\t|\tValor\t|\tData e hora')
+                moldura('Categoria | Nome | Valor | Data e hora | Movimentação | ID\nComandos disponíveis: remover [id], editar [id] ou sair') 
 
                 despesas=db(user, read=True)
+
+                print()
 
                 if len(despesas) == 0:
                     print('>> Nada por aqui...')
                 else:
                     for item in despesas:
-                        print(f'{item[6]}\t|\t{item[5]}\t|\t{item[0]}\t|\t{item[1]}/{item[2]}/{item[3]} às {item[4]}')
+                        print(f'{item[6]}\t|\t{item[5]}\t|\t{item[0]}\t|\t{item[1]}/{item[2]}/{item[3]} às {item[4]}\t|\t{item[7]} [{item[8]}]')
 
-                resposta=input('> Deseja sair da visualização da sua fatura? [S ou N] ')
+                while True:
+                    try:
+                        resposta=input('\n> ').strip().split(' ')
+                        resposta_parametro1 = resposta[0]
+                        while resposta_parametro1 != "remover" and resposta_parametro1 != "editar":
+                            print('>> Comando não encontrado!')
+                            resposta=input('\n> ').strip().split(' ')
+                            resposta_parametro1 = resposta[0]
+                        resposta_parametro2 = resposta[1]
+                    except:
+                        print('>> Por gentileza, use o seguinte formato de comando: remover [ID] (Sem os colchetes)')
+                    else:
+                        break
 
-                while resposta.lower() != 's' and resposta.lower() != 'n':
-                    print('>> Opção não encontrada!')
-                    resposta=input('> Deseja sair da visualização da sua fatura? [S ou N] ')
-
-                if resposta == 's':
-                    console(user)
-            elif resposta=="2":
-
-                confirmar='n'
-
-                while confirmar != 's':
-                    os.system('cls')
-                    moldura('Adicionando uma nova despesa!\nSiga os passos a seguir para adicionar a sua despesa.')
-
-                    nome_despesa=input('> Digite o nome da sua despesa (Ex.: Gasolina): ')
-                    valor_despesa=input('> Digite o valor da sua despesa (Ex.: 200,00): ').replace(',', '.').strip()
-                    
-                    valor_erro=1
-
-                    while valor_erro != 0:
+                while resposta_parametro1 != 'remover' and resposta_parametro1 != 'editar' and not len(resposta_parametro2) == 5:
+                    while True:
                         try:
-                            valor_despesa=str(float(valor_despesa))
+                            resposta=input('\n> ').strip().split(' ')
+                            resposta_parametro1 = resposta[0]
+                            resposta_parametro2 = resposta[1]
                         except:
-                            continue
+                            print('>> Por gentileza, use o seguinte formato de comando: remover [ID] (Sem os colchetes)')
                         else:
-                            valor_erro=0
-                        
-                    categoria_despesa=input('> Digite a categoria de sua despesa (Ex.: Lazer): ')
-                    data_atual=datetime.datetime.now()
-                    pergunta_um=input(f'> Você deseja atribuir a data atual ({data_atual.day}/{data_atual.month}/{data_atual.year} às {data_atual.hour}:{data_atual.minute}) a essa despesa? [S ou N] ').lower().strip()
-                    while pergunta_um != 's' and pergunta_um != 'n':
-                        print('>> Opção não encontrada!')
-                        pergunta_um=input(f'Você deseja atribuir a data atual ({data_atual.day}/{data_atual.month}/{data_atual.year} às {data_atual.hour}:{data_atual.minute}) a essa despesa? [S ou N] ')
-                    if pergunta_um == 's':
-                        dia_despesa=data_atual.day
-                        mes_despesa=data_atual.month
-                        ano_despesa=data_atual.year
-                        hora_despesa=data_atual.hour
-                        minuto_despesa=data_atual.minute
-                    else:
-                        dia_despesa=input('> Informe o dia da sua despesa (Ex.: 20): ')
-                        mes_despesa=input('> Informe o mês da sua despesa (Ex.: 2): ')
-                        ano_despesa=input('> Informe o ano da sua despesa (Ex.: 2023): ')
-                        hora_despesa=input('> Informe a hora da sua despesa (Ex.: 23): ')
-                        minuto_despesa=input('> Informe o minuto da sua despesa (Ex.: 46): ')
+                            break
 
-                    despesa=[str(valor_despesa), str(dia_despesa), str(mes_despesa), str(ano_despesa), f'{hora_despesa}:{minuto_despesa}', str(nome_despesa), str(categoria_despesa)]
-                    
-                    os.system('cls')
-                    moldura('Adicionando uma nova despesa!\nSiga os passos a seguir para adicionar a sua despesa.')
-                    
-                    print('Categoria\t|\tNome\t|\tValor\t|\tData e hora')
-                    print(f'{despesa[6]}\t|\t{despesa[5]}\t|\t{despesa[0]}\t|\t{despesa[1]}/{despesa[2]}/{despesa[3]} às {despesa[4]}')
-        
-                    confirmar=input('Você deseja cofirmar a sua despesa? [S e N] ').lower().strip()
-                    while pergunta_um != 's' and pergunta_um != 'n':
-                        print('>> Opção não encontrada!')
-                        confirmar=input('Você deseja cofirmar a sua despesa? [S e N] ').lower().strip()
-                    if confirmar == 's':
-                        print('>> Salvando sua despesa...')
-                        time.sleep(1)
-                        print(despesa)
-                        despesa=','.join(despesa)
-                        db(user, create=True, data=despesa)
-                        print('>> Despesa salva!')
-                        time.sleep(1)
-                    else:
-                        print('>> Voltando para o menu...')
-                        time.sleep(1)
+                if resposta_parametro1 == "remover":
+                    db(user, resposta_parametro2, delete=True)
+                    print('>> Deletando!')
+                    time.sleep(1)
+                    print('>> Deletado!')
+                    time.sleep(1)
+                else:
+                    print('Editando!')
+
+                
                 console(user)
+
+            elif resposta=="2":
+                os.system('cls')
+                moldura('Aqui você poderá adicionar suas movimentações!\nPara começar, digite se sua movimentação é uma "entrada" ou "saída".\nUse "/sair" para voltar para o menu')
+                resposta=input('> Digite se sua movimentação é uma "entrada" ou "saída": ').strip().lower().replace('í','i')
+                while resposta != "entrada" and resposta != "saida" and resposta != "sair":
+                    print('>> Opção não encontrada')
+                    resposta=input('> Digite se sua movimentação é uma "entrada" ou "saída": ').strip().lower().replace('í','i')
+
+                if resposta == "sair":
+                    print('Ok! Voltando para o menu...')
+                    time.sleep(1)
+                    console(user)
+                elif resposta == "entrada":
+                    confirmar='n'
+
+                    while confirmar != 's':
+                        os.system('cls')
+                        moldura('Adicionando uma nova entrada!\nSiga os passos a seguir para adicionar a sua entrada.')
+
+                        nome_despesa=input('> Digite o nome da sua entrada (Ex.: Gasolina): ')
+                        valor_despesa=input('> Digite o valor da sua entrada (Ex.: 200,00): ').replace(',', '.').strip()
+                        
+                        valor_erro=1
+
+                        while valor_erro != 0:
+                            try:
+                                valor_despesa=str(float(valor_despesa))
+                            except:
+                                continue
+                            else:
+                                valor_erro=0
+                            
+                        categoria_despesa=input('> Digite a categoria de sua entrada (Ex.: Lazer): ')
+                        data_atual=datetime.datetime.now()
+                        pergunta_um=input(f'> Você deseja atribuir a data atual ({data_atual.day}/{data_atual.month}/{data_atual.year} às {data_atual.hour}:{data_atual.minute}) a essa entrada? [S ou N] ').lower().strip()
+                        while pergunta_um != 's' and pergunta_um != 'n':
+                            print('>> Opção não encontrada!')
+                            pergunta_um=input(f'Você deseja atribuir a data atual ({data_atual.day}/{data_atual.month}/{data_atual.year} às {data_atual.hour}:{data_atual.minute}) a essa entrada? [S ou N] ')
+                        if pergunta_um == 's':
+                            dia_despesa=data_atual.day
+                            mes_despesa=data_atual.month
+                            ano_despesa=data_atual.year
+                            hora_despesa=data_atual.hour
+                            minuto_despesa=data_atual.minute
+                        else:
+                            dia_despesa=input('> Informe o dia da sua entrada (Ex.: 20): ')
+                            mes_despesa=input('> Informe o mês da sua entrada (Ex.: 2): ')
+                            ano_despesa=input('> Informe o ano da sua entrada (Ex.: 2023): ')
+                            hora_despesa=input('> Informe a hora da sua entrada (Ex.: 23): ')
+                            minuto_despesa=input('> Informe o minuto da sua entrada (Ex.: 46): ')
+
+                        despesa=[str(valor_despesa), str(dia_despesa), str(mes_despesa), str(ano_despesa), f'{hora_despesa}:{minuto_despesa}', str(nome_despesa), str(categoria_despesa), str('entrada'), str(id())]
+                        
+                        os.system('cls')
+                        moldura('Adicionando uma nova entrada!\nSiga os passos a seguir para adicionar a sua entrada.')
+                        
+                        print('Categoria\t|\tNome\t|\tValor\t|\tData e hora')
+                        print(f'{despesa[6]}\t|\t{despesa[5]}\t|\t{despesa[0]}\t|\t{despesa[1]}/{despesa[2]}/{despesa[3]} às {despesa[4]}')
+            
+                        confirmar=input('Você deseja cofirmar a sua entrada? [S e N] ').lower().strip()
+                        while pergunta_um != 's' and pergunta_um != 'n':
+                            print('>> Opção não encontrada!')
+                            confirmar=input('Você deseja cofirmar a sua entrada? [S e N] ').lower().strip()
+                        if confirmar == 's':
+                            print('>> Salvando sua entrada...')
+                            time.sleep(1)
+
+                            despesa=','.join(despesa)
+                            db(user, create=True, data=despesa)
+                            print('>> Despesa salva!')
+                            time.sleep(1)
+                        else:
+                            print('>> Voltando para o menu...')
+                            time.sleep(1)
+                    console(user)
+                else:
+                    confirmar='n'
+
+                    while confirmar != 's':
+                        os.system('cls')
+                        moldura('Adicionando uma nova despesa!\nSiga os passos a seguir para adicionar a sua despesa.')
+
+                        nome_despesa=input('> Digite o nome da sua despesa (Ex.: Gasolina): ')
+                        valor_despesa=input('> Digite o valor da sua despesa (Ex.: 200,00): ').replace(',', '.').strip()
+                        
+                        valor_erro=1
+
+                        while valor_erro != 0:
+                            try:
+                                valor_despesa=str(float(valor_despesa))
+                            except:
+                                continue
+                            else:
+                                valor_erro=0
+                            
+                        categoria_despesa=input('> Digite a categoria de sua despesa (Ex.: Lazer): ')
+                        data_atual=datetime.datetime.now()
+                        pergunta_um=input(f'> Você deseja atribuir a data atual ({data_atual.day}/{data_atual.month}/{data_atual.year} às {data_atual.hour}:{data_atual.minute}) a essa despesa? [S ou N] ').lower().strip()
+                        while pergunta_um != 's' and pergunta_um != 'n':
+                            print('>> Opção não encontrada!')
+                            pergunta_um=input(f'Você deseja atribuir a data atual ({data_atual.day}/{data_atual.month}/{data_atual.year} às {data_atual.hour}:{data_atual.minute}) a essa despesa? [S ou N] ')
+                        if pergunta_um == 's':
+                            dia_despesa=data_atual.day
+                            mes_despesa=data_atual.month
+                            ano_despesa=data_atual.year
+                            hora_despesa=data_atual.hour
+                            minuto_despesa=data_atual.minute
+                        else:
+                            dia_despesa=input('> Informe o dia da sua despesa (Ex.: 20): ')
+                            mes_despesa=input('> Informe o mês da sua despesa (Ex.: 2): ')
+                            ano_despesa=input('> Informe o ano da sua despesa (Ex.: 2023): ')
+                            hora_despesa=input('> Informe a hora da sua despesa (Ex.: 23): ')
+                            minuto_despesa=input('> Informe o minuto da sua despesa (Ex.: 46): ')
+
+                        despesa=[str(valor_despesa), str(dia_despesa), str(mes_despesa), str(ano_despesa), f'{hora_despesa}:{minuto_despesa}', str(nome_despesa), str(categoria_despesa), str('saida'), str(id())]
+                        
+                        os.system('cls')
+                        moldura('Adicionando uma nova despesa!\nSiga os passos a seguir para adicionar a sua despesa.')
+                        
+                        print('Categoria\t|\tNome\t|\tValor\t|\tData e hora')
+                        print(f'{despesa[6]}\t|\t{despesa[5]}\t|\t{despesa[0]}\t|\t{despesa[1]}/{despesa[2]}/{despesa[3]} às {despesa[4]}')
+            
+                        confirmar=input('Você deseja cofirmar a sua despesa? [S e N] ').lower().strip()
+                        while pergunta_um != 's' and pergunta_um != 'n':
+                            print('>> Opção não encontrada!')
+                            confirmar=input('Você deseja cofirmar a sua despesa? [S e N] ').lower().strip()
+                        if confirmar == 's':
+                            print('>> Salvando sua despesa...')
+                            time.sleep(1)
+
+                            despesa=','.join(despesa)
+                            db(user, create=True, data=despesa)
+                            print('>> Despesa salva!')
+                            time.sleep(1)
+                        else:
+                            print('>> Voltando para o menu...')
+                            time.sleep(1)
+                    console(user)
 
             elif resposta == "4":
                 console(user)
