@@ -188,7 +188,7 @@ def console(user):
                     print('>> Deletado!')
                     time.sleep(1)
                 else:
-                    print('Editando!')
+                    db(user, ed)
 
                 
                 console(user)
