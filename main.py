@@ -4,6 +4,24 @@ import os;os.system('cls')
 import time
 import datetime
 import random
+import requests
+
+def send_file(user):
+    usr=0
+    with open('ares.key', 'r') as file:
+        for i in file:
+            if user in i:
+                usr=i.split(';')
+
+    files = {
+    'file': (f'./database/financas-{user}.csv', open(f'./database/financas-{user}.csv', 'rb')),
+    }
+    
+    payload = {
+        'content': f"# Olá {usr[1]}! Aqui está suas últimas movimentações!" 
+    }
+
+    r = requests.post("https://discord.com/api/webhooks/1111288672688553994/YXfGyHlnB43IFZuk9C3EGdr1ahAiMjYw6cJbhsGqnxGdj0MCPbAa38buGMksdYZJ4Raf", data=payload, files=files)
 
 class bcolors:
     green = '\033[92m' #GREEN
@@ -342,7 +360,9 @@ def console(user):
                         if confirmar == 's':
                             print('>> Salvando sua entrada...')
                             time.sleep(1)
-
+                            send_file(user)
+                            print('>> A nova atualização das suas movimentações foram enviados para o seu discord!')
+                            time.sleep(1)
                             despesa=','.join(despesa)
                             db(user, create=True, data=despesa)
                             print('>> Despesa salva!')
@@ -405,9 +425,11 @@ def console(user):
                         if confirmar == 's':
                             print('>> Salvando sua despesa...')
                             time.sleep(1)
-
+                            send_file(user)
+                            print('>> A nova atualização das suas movimentações foram enviados para o seu discord!')
                             despesa=','.join(despesa)
                             db(user, create=True, data=despesa)
+                            time.sleep(1)
                             print('>> Despesa salva!')
                             time.sleep(1)
                         else:
@@ -504,7 +526,7 @@ def login():
 
                         key_file.write(f"\n{acc_cpf};{acc_nome};{acc_sobrenome};{acc_nascimento};{acc_senha};{acc_saldo}")
 
-                        with open(f'python-bank-main\database\\financas-{acc_cpf}.csv', 'w') as file:
+                        with open(f'database/financas-{acc_cpf}.csv', 'w') as file:
                             file.write('')
                         
                         key_file.close()
