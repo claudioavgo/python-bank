@@ -5,15 +5,30 @@ import time
 import datetime
 import random
 
-def db(user, data='', create=False, read=False, read_choose="data", update=False, update_content=False, update_category=False, delete=False):
+class bcolors:
+    green = '\033[92m' #GREEN
+    RESET = '\033[0m' #RESET COLOR
+    negrito = '\033[1m' #Negrito
+
+def db(user, data='', create=False, create_write=False, read=False, read_choose="data", update=False, update_content=False, delete=False):
 
     # Formatação do banco de dados
     # tipo, valor, alteração, dia, mês, ano, código
     try:
         if create and not read and not update and not delete:
-            with open(f'./database/financas-{user}.csv', 'a') as file:
-                file.write(f'{data}\n')
-                return "Done!"
+            if create_write:
+                with open(f'./database/financas-{user}.csv', 'w') as file:
+                    file.write(f'')
+                    file.close()
+                with open(f'./database/financas-{user}.csv', 'a') as fila_append:
+                    for i in data:
+                        fila_append.write(f'{i}\n')
+                    fila_append.close()
+                return 'Ok!'
+            else:
+                with open(f'./database/financas-{user}.csv', 'a') as file:
+                    file.write(f'{data}\n')
+                    return "Done!"
             
         elif read and not create and not update and not delete:
             with open(f'./database/financas-{user}.csv', 'r') as file:
@@ -28,30 +43,20 @@ def db(user, data='', create=False, read=False, read_choose="data", update=False
                         if read_choose in item:
                             filtro.append(item)
                     return filtro
+            file.close()
 
-        elif update and update_content and update_category and not read and not create and not delete:
-            changer=None
-            changer_index=0
+        elif update and data and update_content and not read and not create and not delete:
             banco_salvo=[]
 
-            with open(f'./database/financas-{user}.csv', 'r') as file:
-                lines=file.readlines()
+            cont = db(user, read=True)
 
-            for index, i in enumerate(lines):
-                if data in i:
-                    changer=i.split(', ')
-                    changer_index=index
+            for item in cont:
+                if data in item:
+                    banco_salvo.append(update_content)
                 else:
-                    banco_salvo.append(i)
-                
-            if update_category == "tipo":
-                changer.pop(0)
-                changer.insert(0, update_content)
-
-            banco_salvo.insert(changer_index, ', '.join(changer))
-
-            with open(f'./database/financas-{user}.csv', 'w') as file:
-                file.write(''.join(banco_salvo))
+                    banco_salvo.append(','.join(item))
+            
+            db(user, create=True, create_write=True, data=banco_salvo)
 
             return 'Updated'
         
@@ -64,9 +69,11 @@ def db(user, data='', create=False, read=False, read_choose="data", update=False
                 for i in lines:
                     if not data in i.strip():
                         banco_salvo.append(i)
+            file.close()
                         
             with open(f'./database/financas-{user}.csv', 'w') as file:
                 file.write(''.join(banco_salvo))
+            file.close()
                 
             return "Deleted!"
         else:
@@ -75,8 +82,6 @@ def db(user, data='', create=False, read=False, read_choose="data", update=False
         with open(f'./database/financas-{user}.csv', 'w') as file:
             file.write('')
         return e
-    except:
-        return "[ERROR] (01) Não definido!"
 
 def banner(texto, subtitulo=''):
     linha=f"+ {len(texto)*'=' if len(texto) > len(subtitulo) else len(subtitulo)*'='} +"
@@ -104,7 +109,17 @@ def moldura(texto):
     print(f'+ {"="*len(maior_linha)} +')
 
 def balanco(user):
-    db(user)
+    data = db(user, read=True)
+    total=0
+    if data:
+        for i in data:
+            if i[7] == "saida":
+                total-=float(i[0])
+            else:
+                total+=float(i[0])
+    
+    return total
+
 
 def id(numeros=5):
     letras=list("abcdefghijklmnopqrstuvwxyz")
@@ -122,18 +137,20 @@ def id(numeros=5):
                 token.append(random.choice(letras))   	
     return ''.join(token)
 
-
 def console(user):
     os.system('cls')
     usr=None
-    with open('ares.key', 'r') as file:
-        for usuario in file.readlines():
-            if user in usuario:
-                usr=usuario.strip().split(";")
 
-    opcoes='[1] - Ver extrato  [2] - Adicionar movimentação  [3] - Limpar  [4] - Sair'
+    saldo = balanco(user)
 
-    banner(f"Menu {' '*(len(opcoes) - (len(f'Conta: [{usr[1]}]')+len('Menu ')))}Conta: [{usr[1]}] Saldo: []", opcoes)
+    with open('./ares.key', 'r') as usuarios:
+        for userx in usuarios:
+            if user in userx:
+                usr=userx.split(';')
+
+    opcoes= f'[{bcolors.green}1{bcolors.RESET}] - Ver extrato  [{bcolors.green}2{bcolors.RESET}] - Adicionar movimentação  [{bcolors.green}3{bcolors.RESET}] - Limpar  [{bcolors.green}4{bcolors.RESET}] - Sair'
+    menu=f"Menu - Conta: [{usr[1]}] - Saldo: [{saldo}]"
+    banner(f"Menu - Conta: [{usr[1]}] - Saldo: [{saldo}]{' '*(len(opcoes)-len(menu))}", opcoes)
 
     while True:
         try:
@@ -149,7 +166,6 @@ def console(user):
                 despesas=db(user, read=True)
 
                 print()
-
                 if len(despesas) == 0:
                     print('>> Nada por aqui...')
                 else:
@@ -160,7 +176,13 @@ def console(user):
                     try:
                         resposta=input('\n> ').strip().split(' ')
                         resposta_parametro1 = resposta[0]
-                        while resposta_parametro1 != "remover" and resposta_parametro1 != "editar":
+
+                        if resposta_parametro1 == "sair":
+                            print('>> Ok, voltando para o menu...')
+                            time.sleep(1)
+                            console(user)
+                        
+                        while resposta_parametro1 != "remover" and resposta_parametro1 != "editar" and resposta_parametro1 != "sair":
                             print('>> Comando não encontrado!')
                             resposta=input('\n> ').strip().split(' ')
                             resposta_parametro1 = resposta[0]
@@ -170,7 +192,11 @@ def console(user):
                     else:
                         break
 
-                while resposta_parametro1 != 'remover' and resposta_parametro1 != 'editar' and not len(resposta_parametro2) == 5:
+                while resposta_parametro1 != 'remover' and resposta_parametro1 != "editar" and resposta_parametro1 != "sair" and not len(resposta_parametro2) == 5:
+                    if resposta_parametro1 == "sair":
+                        print('>> Ok, voltando para o menu...')
+                        time.sleep(1)
+                        console(user)
                     while True:
                         try:
                             resposta=input('\n> ').strip().split(' ')
@@ -188,14 +214,71 @@ def console(user):
                     print('>> Deletado!')
                     time.sleep(1)
                 else:
-                    db(user, ed)
+                    info = db(user, read=True)
+                    tem=False
+                    transacao=0
+                    for i in info:
+                        if resposta_parametro2 in i:
+                            tem=True
+                            transacao=i
+                    
+                    if tem:
+                        os.system('cls')
+                        moldura(f'Alterando o item de ID: {resposta_parametro2}!\n{transacao}')
+                        print()
+                        entrada_despesa=input(f'Digite se alteração irá ser uma [saída ou entrada]: ').replace('í', 'i')
+
+                        nome_despesa=input(f'> Digite o nome da sua alteracão {bcolors.negrito}(Ex.: Gasolina){bcolors.RESET}: ')
+                        valor_despesa=input(f'> Digite o valor da sua alteracão {bcolors.negrito}(Ex.: 200,00){bcolors.RESET}: ').replace(',', '.').strip()
+                        
+                        valor_erro=1
+
+                        while valor_erro != 0:
+                            try:
+                                valor_despesa=str(float(valor_despesa))
+                            except:
+                                continue
+                            else:
+                                valor_erro=0
+                            
+                        categoria_despesa=input(f'> Digite a nova categoria {bcolors.negrito}(Ex.: Lazer){bcolors.RESET}: ')
+                        data_atual=datetime.datetime.now()
+                        pergunta_um=input(f'> Você deseja atribuir a data atual ({data_atual.day}/{data_atual.month}/{data_atual.year} às {data_atual.hour}:{data_atual.minute}) a essa alteracão? {bcolors.negrito}[S ou N]{bcolors.RESET} ').lower().strip()
+                        while pergunta_um != 's' and pergunta_um != 'n':
+                            print('>> Opção não encontrada!')
+                            pergunta_um=input(f'Você deseja atribuir a data atual ({data_atual.day}/{data_atual.month}/{data_atual.year} às {data_atual.hour}:{data_atual.minute}) a essa alteracão? {bcolors.negrito}[S ou N]{bcolors.RESET} ')
+                        if pergunta_um == 's':
+                            dia_despesa=data_atual.day
+                            mes_despesa=data_atual.month
+                            ano_despesa=data_atual.year
+                            hora_despesa=data_atual.hour
+                            minuto_despesa=data_atual.minute
+                        else:
+                            dia_despesa=input(f'> Informe o dia da sua alteracão {bcolors.negrito}(Ex.: 20){bcolors.RESET}: ')
+                            mes_despesa=input(f'> Informe o mês da sua alteracão {bcolors.negrito}(Ex.: 2){bcolors.RESET}: ')
+                            ano_despesa=input(f'> Informe o ano da sua alteracão {bcolors.negrito}(Ex.: 2023){bcolors.RESET}: ')
+                            hora_despesa=input(f'> Informe a hora da sua alteracão {bcolors.negrito}(Ex.: 23){bcolors.RESET}: ')
+                            minuto_despesa=input(f'> Informe o minuto da sua alteracão {bcolors.negrito}(Ex.: 46){bcolors.RESET}: ')
+
+                        despesa=f'{str(valor_despesa)},{str(dia_despesa)},{str(mes_despesa)},{str(ano_despesa)},{f"{hora_despesa}:{minuto_despesa}"},{str(nome_despesa)},{str(categoria_despesa)},{str(entrada_despesa)},{str(resposta_parametro2)}'
+
+                        db(user, data=resposta_parametro2, update=True, update_content=despesa)
+                        print()
+                        print('>> Alteração feita com sucesso!')
+                        time.sleep(1)
+                        console(user)
+
+                    else:
+                        print('>> Item não encontrado! Voltando para o menu...')
+                        time.sleep(1)
+                        console(user)
 
                 
                 console(user)
 
             elif resposta=="2":
                 os.system('cls')
-                moldura('Aqui você poderá adicionar suas movimentações!\nPara começar, digite se sua movimentação é uma "entrada" ou "saída".\nUse "/sair" para voltar para o menu')
+                moldura(f'Aqui você poderá adicionar suas movimentações!\nPara começar, digite se sua movimentação é uma {bcolors.green}"entrada"{bcolors.RESET} ou {bcolors.green}"saída"{bcolors.RESET}.\nUse {bcolors.green}"sair"{bcolors.RESET} para voltar para o menu')
                 resposta=input('> Digite se sua movimentação é uma "entrada" ou "saída": ').strip().lower().replace('í','i')
                 while resposta != "entrada" and resposta != "saida" and resposta != "sair":
                     print('>> Opção não encontrada')
@@ -212,8 +295,8 @@ def console(user):
                         os.system('cls')
                         moldura('Adicionando uma nova entrada!\nSiga os passos a seguir para adicionar a sua entrada.')
 
-                        nome_despesa=input('> Digite o nome da sua entrada (Ex.: Gasolina): ')
-                        valor_despesa=input('> Digite o valor da sua entrada (Ex.: 200,00): ').replace(',', '.').strip()
+                        nome_despesa=input(f'> Digite o nome da sua entrada {bcolors.negrito}(Ex.: Gasolina){bcolors.RESET}: ')
+                        valor_despesa=input(f'> Digite o valor da sua entrada {bcolors.negrito}(Ex.: 200,00){bcolors.RESET}: ').replace(',', '.').strip()
                         
                         valor_erro=1
 
@@ -225,12 +308,12 @@ def console(user):
                             else:
                                 valor_erro=0
                             
-                        categoria_despesa=input('> Digite a categoria de sua entrada (Ex.: Lazer): ')
+                        categoria_despesa=input(f'> Digite a categoria de sua entrada {bcolors.negrito}(Ex.: Lazer){bcolors.RESET}: ')
                         data_atual=datetime.datetime.now()
-                        pergunta_um=input(f'> Você deseja atribuir a data atual ({data_atual.day}/{data_atual.month}/{data_atual.year} às {data_atual.hour}:{data_atual.minute}) a essa entrada? [S ou N] ').lower().strip()
+                        pergunta_um=input(f'> Você deseja atribuir a data atual ({data_atual.day}/{data_atual.month}/{data_atual.year} às {data_atual.hour}:{data_atual.minute}) a essa entrada? {bcolors.negrito}[S ou N]{bcolors.RESET} ').lower().strip()
                         while pergunta_um != 's' and pergunta_um != 'n':
                             print('>> Opção não encontrada!')
-                            pergunta_um=input(f'Você deseja atribuir a data atual ({data_atual.day}/{data_atual.month}/{data_atual.year} às {data_atual.hour}:{data_atual.minute}) a essa entrada? [S ou N] ')
+                            pergunta_um=input(f'Você deseja atribuir a data atual ({data_atual.day}/{data_atual.month}/{data_atual.year} às {data_atual.hour}:{data_atual.minute}) a essa entrada? {bcolors.negrito}[S ou N]{bcolors.RESET} ')
                         if pergunta_um == 's':
                             dia_despesa=data_atual.day
                             mes_despesa=data_atual.month
@@ -238,11 +321,11 @@ def console(user):
                             hora_despesa=data_atual.hour
                             minuto_despesa=data_atual.minute
                         else:
-                            dia_despesa=input('> Informe o dia da sua entrada (Ex.: 20): ')
-                            mes_despesa=input('> Informe o mês da sua entrada (Ex.: 2): ')
-                            ano_despesa=input('> Informe o ano da sua entrada (Ex.: 2023): ')
-                            hora_despesa=input('> Informe a hora da sua entrada (Ex.: 23): ')
-                            minuto_despesa=input('> Informe o minuto da sua entrada (Ex.: 46): ')
+                            dia_despesa=input(f'> Informe o dia da sua entrada {bcolors.negrito}(Ex.: 20){bcolors.RESET}: ')
+                            mes_despesa=input(f'> Informe o mês da sua entrada {bcolors.negrito}(Ex.: 2){bcolors.RESET}: ')
+                            ano_despesa=input(f'> Informe o ano da sua entrada {bcolors.negrito}(Ex.: 2023){bcolors.RESET}: ')
+                            hora_despesa=input(f'> Informe a hora da sua entrada {bcolors.negrito}(Ex.: 23){bcolors.RESET}: ')
+                            minuto_despesa=input(f'> Informe o minuto da sua entrada {bcolors.negrito}(Ex.: 46){bcolors.RESET}: ')
 
                         despesa=[str(valor_despesa), str(dia_despesa), str(mes_despesa), str(ano_despesa), f'{hora_despesa}:{minuto_despesa}', str(nome_despesa), str(categoria_despesa), str('entrada'), str(id())]
                         
@@ -252,10 +335,10 @@ def console(user):
                         print('Categoria\t|\tNome\t|\tValor\t|\tData e hora')
                         print(f'{despesa[6]}\t|\t{despesa[5]}\t|\t{despesa[0]}\t|\t{despesa[1]}/{despesa[2]}/{despesa[3]} às {despesa[4]}')
             
-                        confirmar=input('Você deseja cofirmar a sua entrada? [S e N] ').lower().strip()
+                        confirmar=input(f'Você deseja cofirmar a sua entrada? {bcolors.negrito}[S e N]{bcolors.RESET} ').lower().strip()
                         while pergunta_um != 's' and pergunta_um != 'n':
                             print('>> Opção não encontrada!')
-                            confirmar=input('Você deseja cofirmar a sua entrada? [S e N] ').lower().strip()
+                            confirmar=input(f'Você deseja cofirmar a sua entrada? {bcolors.negrito}[S e N]{bcolors.RESET} ').lower().strip()
                         if confirmar == 's':
                             print('>> Salvando sua entrada...')
                             time.sleep(1)
@@ -275,8 +358,8 @@ def console(user):
                         os.system('cls')
                         moldura('Adicionando uma nova despesa!\nSiga os passos a seguir para adicionar a sua despesa.')
 
-                        nome_despesa=input('> Digite o nome da sua despesa (Ex.: Gasolina): ')
-                        valor_despesa=input('> Digite o valor da sua despesa (Ex.: 200,00): ').replace(',', '.').strip()
+                        nome_despesa=input(f'> Digite o nome da sua despesa {bcolors.negrito}(Ex.: Gasolina){bcolors.RESET}: ')
+                        valor_despesa=input(f'> Digite o valor da sua despesa {bcolors.negrito}(Ex.: 200,00){bcolors.RESET}: ').replace(',', '.').strip()
                         
                         valor_erro=1
 
@@ -288,12 +371,12 @@ def console(user):
                             else:
                                 valor_erro=0
                             
-                        categoria_despesa=input('> Digite a categoria de sua despesa (Ex.: Lazer): ')
+                        categoria_despesa=input(f'> Digite a categoria de sua despesa {bcolors.negrito}(Ex.: Lazer){bcolors.RESET}: ')
                         data_atual=datetime.datetime.now()
-                        pergunta_um=input(f'> Você deseja atribuir a data atual ({data_atual.day}/{data_atual.month}/{data_atual.year} às {data_atual.hour}:{data_atual.minute}) a essa despesa? [S ou N] ').lower().strip()
+                        pergunta_um=input(f'> Você deseja atribuir a data atual ({data_atual.day}/{data_atual.month}/{data_atual.year} às {data_atual.hour}:{data_atual.minute}) a essa despesa? {bcolors.negrito}[S ou N]{bcolors.RESET} ').lower().strip()
                         while pergunta_um != 's' and pergunta_um != 'n':
                             print('>> Opção não encontrada!')
-                            pergunta_um=input(f'Você deseja atribuir a data atual ({data_atual.day}/{data_atual.month}/{data_atual.year} às {data_atual.hour}:{data_atual.minute}) a essa despesa? [S ou N] ')
+                            pergunta_um=input(f'Você deseja atribuir a data atual ({data_atual.day}/{data_atual.month}/{data_atual.year} às {data_atual.hour}:{data_atual.minute}) a essa despesa? {bcolors.negrito}[S ou N]{bcolors.RESET} ')
                         if pergunta_um == 's':
                             dia_despesa=data_atual.day
                             mes_despesa=data_atual.month
@@ -301,11 +384,11 @@ def console(user):
                             hora_despesa=data_atual.hour
                             minuto_despesa=data_atual.minute
                         else:
-                            dia_despesa=input('> Informe o dia da sua despesa (Ex.: 20): ')
-                            mes_despesa=input('> Informe o mês da sua despesa (Ex.: 2): ')
-                            ano_despesa=input('> Informe o ano da sua despesa (Ex.: 2023): ')
-                            hora_despesa=input('> Informe a hora da sua despesa (Ex.: 23): ')
-                            minuto_despesa=input('> Informe o minuto da sua despesa (Ex.: 46): ')
+                            dia_despesa=input(f'> Informe o dia da sua despesa {bcolors.negrito}(Ex.: 20){bcolors.RESET}: ')
+                            mes_despesa=input(f'> Informe o mês da sua despesa {bcolors.negrito}(Ex.: 2){bcolors.RESET}: ')
+                            ano_despesa=input(f'> Informe o ano da sua despesa {bcolors.negrito}(Ex.: 2023){bcolors.RESET}: ')
+                            hora_despesa=input(f'> Informe a hora da sua despesa {bcolors.negrito}(Ex.: 23){bcolors.RESET}: ')
+                            minuto_despesa=input(f'> Informe o minuto da sua despesa {bcolors.negrito}(Ex.: 46){bcolors.RESET}: ')
 
                         despesa=[str(valor_despesa), str(dia_despesa), str(mes_despesa), str(ano_despesa), f'{hora_despesa}:{minuto_despesa}', str(nome_despesa), str(categoria_despesa), str('saida'), str(id())]
                         
@@ -315,10 +398,10 @@ def console(user):
                         print('Categoria\t|\tNome\t|\tValor\t|\tData e hora')
                         print(f'{despesa[6]}\t|\t{despesa[5]}\t|\t{despesa[0]}\t|\t{despesa[1]}/{despesa[2]}/{despesa[3]} às {despesa[4]}')
             
-                        confirmar=input('Você deseja cofirmar a sua despesa? [S e N] ').lower().strip()
+                        confirmar=input(f'Você deseja cofirmar a sua despesa? {bcolors.negrito}[S e N]{bcolors.RESET} ').lower().strip()
                         while pergunta_um != 's' and pergunta_um != 'n':
                             print('>> Opção não encontrada!')
-                            confirmar=input('Você deseja cofirmar a sua despesa? [S e N] ').lower().strip()
+                            confirmar=input(f'Você deseja cofirmar a sua despesa? {bcolors.negrito}[S e N]{bcolors.RESET} ').lower().strip()
                         if confirmar == 's':
                             print('>> Salvando sua despesa...')
                             time.sleep(1)
@@ -331,19 +414,19 @@ def console(user):
                             print('>> Voltando para o menu...')
                             time.sleep(1)
                     console(user)
-
-            elif resposta == "4":
+        
+            elif resposta == "3":
                 console(user)
-            elif resposta == "5":
+            elif resposta == "4":
                 print('>> Uma pena você ir, até mais!')
                 time.sleep(1)
                 exit()
         except KeyboardInterrupt:
             os.system('cls')
-            resposta=input('> Você realmente deseja sair do programa? [S ou N] ').lower().strip()
+            resposta=input(f'> Você realmente deseja sair do programa? {bcolors.negrito}[S ou N]{bcolors.RESET} ').lower().strip()
             while resposta != 's' and resposta != 'n':
                 print('>> Opção não encontrada!')
-                resposta=input('> Você realmente deseja sair do programa? [S ou N] ')
+                resposta=input(f'> Você realmente deseja sair do programa? {bcolors.negrito}[S ou N]{bcolors.RESET} ')
             if resposta=='s':
                 print('>> Uma pena você ir, até mais!')
                 time.sleep(1)
@@ -375,12 +458,12 @@ def login():
 
                 print(f"> A última sessão encontrada foi de {ultimo_acesso_nome}!")
 
-                res = int(input('> Você deseja continuar [0] ou realizar um novo login [1]? '))
+                res = int(input(f'> Você deseja continuar [{bcolors.green}0{bcolors.RESET}] ou realizar um novo login [{bcolors.green}1{bcolors.RESET}]? '))
 
                 while res != 1 and res != 0:
                     print('> Opção não encontrada, por gentileza digite novamente.')
 
-                    res = int(input('> Você deseja continuar [0] ou realizar um novo login [1]? '))
+                    res = int(input(F'> Você deseja continuar [{bcolors.green}0{bcolors.RESET}] ou realizar um novo login [{bcolors.green}1{bcolors.RESET}]? '))
 
                 if res == 0:
                     while pin != senha:
@@ -395,32 +478,33 @@ def login():
                                 print(f'> Você acabou com suas tentativas, encerrando aplicativo.')
                                 exit()
                             else:
-                                print(f'> PIN inválido! Mais {tentativas} tentativas!')
+                                print(f'> PIN inválido! Mais {bcolors.green}{tentativas}{bcolors.RESET} tentativas!')
                 else:
                     os.system('cls')
 
                     banner('Ok, vamos entrar em uma nova conta! ')
 
-                    res = int(input('> Você deseja realizar um novo login [0] ou criar uma nova conta [1]?'))
+                    res = int(input(f'> Você deseja realizar um novo login [{bcolors.green}0{bcolors.RESET}] ou criar uma nova conta [{bcolors.green}1{bcolors.RESET}]?'))
 
                     while res != 1 and res != 0:
                         print('> Opção não encontrada, por gentileza digite novamente.')
 
-                        res = int(input('> Você deseja realizar um novo login [0] ou criar uma nova conta [1]?'))
+                        res = int(input(f'> Você deseja realizar um novo login [{bcolors.green}0{bcolors.RESET}] ou criar uma nova conta [{bcolors.green}1{bcolors.RESET}]?'))
                         
                     if res == 1:
                         os.system('cls')
                         banner('Vamos criar uma nova conta!')
 
-                        acc_nome=input('> Digite o seu primeiro nome (Ex.: Carlos): ')
-                        acc_sobrenome=input('> Digite o seu sobrenome (Ex.: Souza): ')
-                        acc_nascimento=input('> Digite o ano do seu nascimento (Ex.: 2000): ')
-                        acc_cpf=input('> Digite o seu CPF (Ex.: 12345678910): ').replace('.','')
-                        acc_senha=input('> Crie sua senha (Ex.: 12345): ')
+                        acc_nome=input(f'> Digite o seu primeiro nome {bcolors.negrito}(Ex.: Carlos){bcolors.RESET}: ')
+                        acc_sobrenome=input(f'> Digite o seu sobrenome {bcolors.negrito}(Ex.: Souza){bcolors.RESET}: ')
+                        acc_nascimento=input(f'> Digite o ano do seu nascimento {bcolors.negrito}(Ex.: 2000){bcolors.RESET}: ')
+                        acc_cpf=input(f'> Digite o seu CPF {bcolors.negrito}(Ex.: 12345678910){bcolors.RESET}: ').replace('.','')
+                        acc_senha=input(f'> Crie sua senha {bcolors.negrito}(Ex.: 12345){bcolors.RESET}: ')
+                        acc_saldo = 0
 
-                        key_file.write(f"\n{acc_cpf};{acc_nome};{acc_sobrenome};{acc_nascimento};{acc_senha}")
+                        key_file.write(f"\n{acc_cpf};{acc_nome};{acc_sobrenome};{acc_nascimento};{acc_senha};{acc_saldo}")
 
-                        with open(f'./database/financas-{acc_cpf}.csv', 'w') as file:
+                        with open(f'python-bank-main\database\\financas-{acc_cpf}.csv', 'w') as file:
                             file.write('')
                         
                         key_file.close()
@@ -465,13 +549,13 @@ def login():
                                         print(f'> Você acabou com suas tentativas, encerrando aplicativo.')
                                         exit()
                                     else:
-                                        print(f'> PIN inválido! Mais {tentativas} tentativas!')
+                                        print(f'> PIN inválido! Mais {bcolors.green}{tentativas}{bcolors.RESET} tentativas!')
     except KeyboardInterrupt:
         os.system('cls')
-        resposta=input('> Você realmente deseja sair do programa? [S ou N] ').lower().strip()
+        resposta=input(f'> Você realmente deseja sair do programa? {bcolors.green}[S ou N]{bcolors.RESET} ').lower().strip()
         while resposta != 's' and resposta != 'n':
             print('>> Opção não encontrada!')
-            resposta=input('> Você realmente deseja sair do programa? [S ou N] ')
+            resposta=input(f'> Você realmente deseja sair do programa? {bcolors.negrito}[S ou N]{bcolors.RESET} ')
         if resposta=='s':
             print('>> Uma pena você ir, até mais!')
             time.sleep(1)
